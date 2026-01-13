@@ -11,6 +11,7 @@ import pygame
 from PIL import Image
 import time
 import pandas as pd
+import re
 
 
 DATABASE_PATH = "./src/canteens.xlsx"
@@ -21,11 +22,13 @@ PIN_PATH = "./src/pin.png"
 class CanteenQuery:
     """All query related functions defined within the class."""
 
-    def __init__(self):
+    def __init__(self, db_path):
         """Initialise DB with extraction of keyword, price and location."""
-        self.canteen_data = pd.read_excel(DATABASE_PATH)
+
+        self.canteen_data = pd.read_excel(db_path)
         self.canteen_names = sorted(self.canteen_data['Canteen'].unique(), key=str.lower)
         self.canteen_stalls = sorted(self.canteen_data['Stall'].unique(), key=str.lower)
+        self.results = None
 
         if __debug__: print("Database Loaded.")
 
@@ -113,6 +116,34 @@ class CanteenQuery:
         pygame.init()
         
         return 0
+    
+    def search_by_keywords(self, key):
+        """Return results by keyword"""
+
+        if not isinstance(key, str): return 400
+
+        parsed_key = self.normalize_query(key)
+        print(parsed_key)
+
+        return 0
+    
+    def normalize_query(self, key):
+        """Cleans query and catches logical errors"""
+
+        # REGEX Cleaning
+        key = key.upper()
+        key = re.sub(r'\s+',' ', key)
+        key = re.sub(r'\bAND\b', '&', key)
+        key = re.sub(r'\bOR\b', '@', key)
+        key = re.sub(r'(?<![@&])\s+(?![@&])', '&', key)
+        key = re.sub(r'\s+','', key)
+        key = re.sub(r'^[@&]+|[@&]+$', '', key)
+        key = re.sub(r'[\s@]*&[\s@&]*', '&', key)
+        key = re.sub(r'[@]*@[@]*', '@', key)
+
+        return key
+
+        
 
 
 def main():
@@ -129,7 +160,15 @@ def main():
             "5 -- Exit Program\n"
             "========================"
         )
-        user_option = int(input("Enter option [1-5]: "))
+
+        while True:
+            try:
+                user_option = int(input("Enter option [1-5]: "))
+                if not 0 < user_option < 6:
+                    raise ValueError("Out of range.")
+                break
+            except ValueError:
+                print("Please try again.")
     
         match user_option:
             case 1:
@@ -140,15 +179,19 @@ def main():
                     f"Location Dictionary: {db.canteen_locations}\n"
                 )
             case 2:
-                print("Hi!")
+                user_option = input("Enter query: ")
+                db.search_by_keywords(user_option)
             case 3:
                 print("Hi!")
             case 4:
                 db.get_user_location_interface()
             case 5:
-                print("Hi!")
+                print("Thank you, goodbye!")
+                return(1)
+            
 
 
 if __name__ == "__main__":
-    db = CanteenQuery()
+    db = CanteenQuery(DATABASE_PATH)
     main()
+ 

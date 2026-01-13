@@ -147,8 +147,10 @@ def main():
                 db.get_user_location_interface()
             case 5:
                 print("Hi!")
+            
 
 
 if __name__ == "__main__":
     db = CanteenQuery()
     main()
+ 
