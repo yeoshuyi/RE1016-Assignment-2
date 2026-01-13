@@ -14,6 +14,8 @@ import pandas as pd
 
 
 DATABASE_PATH = "./canteens.xlsx"
+IMAGE_PATH = "./NTUcampus.jpg"
+PIN_PATH = "./pin.png"
 
 
 class CanteenQuery:
@@ -58,6 +60,56 @@ class CanteenQuery:
 
         if __debug__: print("Keyword, Price and Location Generation Done.")
         
+    def get_user_location_interface(self):
+        """Get user's location with PyGame"""
 
+        SCREEN_TITLE = "NTU Map"
 
+        image = Image.open(IMAGE_PATH)
+        image_width_original, image_height_original = image.size
+        scaled_width = int(image_width_original * 0.9)
+        scaled_height = int(image_height_original * 0.9)
         
+        pin_image = pygame.image.load(PIN_PATH)
+        pin_image_scaled = pygame.transform.scale(pin_image, (60, 60))
+        screen_image = pygame.image.load(IMAGE_PATH)
+        screen_image_scaled = pygame.transform.scale(scaled_width, scaled_height)
+
+        pygame.init()
+        screen = pygame.display.set_mode([scaled_width, scaled_height])
+        pygame.display.set_caption(SCREEN_TITLE)
+        screen.blit(screen_image_scaled, (0,0))
+        pygame.display.flip()
+
+        while True:
+            pygame.event.pump()
+            event = pygame.event.wait()
+
+            match event.type:
+                case pygame.QUIT:
+                    pygame.display.quit()
+                    self.mouseX_scaled = None
+                    self.mouseY_scaled = None
+                    break
+
+                case pygame.VIDEORESIZE:
+                    screen = pygame.display.set_mode(
+                    event.dict['size'], pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.RESIZABLE)
+                    screen.blit(pygame.transform.scale(screen_image_scaled, event.dict['size']), (0, 0))
+                    scaled_height = event.dict['h']
+                    scaled_width = event.dict['w']
+                    pygame.display.flip()
+                
+                case pygame.MOUSEBUTTONDOWN:
+                    (mouseX, mouseY) = pygame.mouse.get_pos()
+                    screen.blit(pin_image_scaled, (mouseX - 25, mouseY - 45))
+                    pygame.display.flip()
+                    self.mouseX_scaled = int(mouseX * 1281 / scaled_width)
+                    self.mouseY_scaled = int(mouseY * 1550 / scaled_height)
+                    time.sleep(0.2)
+                    break
+        
+        pygame.quit()
+        pygame.init()
+        
+        return 0
