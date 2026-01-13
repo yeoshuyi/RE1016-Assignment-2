@@ -73,7 +73,7 @@ class CanteenQuery:
         pin_image = pygame.image.load(PIN_PATH)
         pin_image_scaled = pygame.transform.scale(pin_image, (60, 60))
         screen_image = pygame.image.load(IMAGE_PATH)
-        screen_image_scaled = pygame.transform.scale(scaled_width, scaled_height)
+        screen_image_scaled = pygame.transform.scale(screen_image, (scaled_width, scaled_height))
 
         pygame.init()
         screen = pygame.display.set_mode([scaled_width, scaled_height])
@@ -113,3 +113,42 @@ class CanteenQuery:
         pygame.init()
         
         return 0
+
+
+def main():
+    """Main function for user interface"""
+
+    while True:
+        print(
+            "========================\n"
+            "F&B Recommendation Menu\n"
+            "1 -- Display Data\n"
+            "2 -- Keyword-based Search\n"
+            "3 -- Price-based Search\n"
+            "4 -- Location-based Search\n"
+            "5 -- Exit Program\n"
+            "========================"
+        )
+        user_option = int(input("Enter option [1-5]: "))
+    
+        match user_option:
+            case 1:
+                print(
+                    f"1 -- Display Data\n"
+                    f"Keyword Dictionary: {db.keywords}\n"
+                    f"Price Dictionary: {db.prices}\n"
+                    f"Location Dictionary: {db.canteen_locations}\n"
+                )
+            case 2:
+                print("Hi!")
+            case 3:
+                print("Hi!")
+            case 4:
+                db.get_user_location_interface()
+            case 5:
+                print("Hi!")
+
+
+if __name__ == "__main__":
+    db = CanteenQuery()
+    main()
