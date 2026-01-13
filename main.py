@@ -30,7 +30,7 @@ class CanteenQuery:
         self.canteen_stalls = sorted(self.canteen_data['Stall'].unique(), key=str.lower)
         self.results = None
 
-        if __debug__: print("Database Loaded.")
+        if __debug__: print("[DEBUG] Database Loaded.")
 
         # Keyword, price and location generation
 
@@ -61,7 +61,7 @@ class CanteenQuery:
             self.canteen_locations[canteen] =  [int(canteen_locations_intermediate[canteen].split(',')[0]),
                                                 int(canteen_locations_intermediate[canteen].split(',')[1])]
 
-        if __debug__: print("Keyword, Price and Location Generation Done.")
+        if __debug__: print("[DEBUG] Keyword, Price and Location Generation Done.")
         
     def get_user_location_interface(self):
         """Get user's location with PyGame"""
@@ -123,15 +123,30 @@ class CanteenQuery:
         if not isinstance(key, str): return 400
 
         parsed_key = self.normalize_query(key)
-        print(parsed_key)
+        if __debug__: 
+            print(
+                f"[DEBUG] Query resolved as:\n{parsed_key}"
+            )
 
         return 0
     
     def normalize_query(self, key):
-        """Cleans query and catches logical errors"""
+        """
+        Cleans query and resolve logical conflicts (AND OR). Follows rules:
+        1.  Any leading/trailing AND, OR, /s is ignored.
+        2.  Any non-alphanumeric symbols is ignored.
+        3.  In all cases "Foo AND OR AND AND OR... Bar", logic is resolved to a single AND
+            as long as a single "AND" is present. 
+        4.  If no "AND" present, in the case of "Foo OR OR... Bar", logic is resolved to a single OR.
+        5.  In all cases "Foo AND Bar OR Buz AND Qux", AND takes priority as (Foo & Bar) + (Buz & Qux).
+        6.  Cases like the restaurant "ANDES" will not be resolved as AND, as only /bAND/b is accepted.
+
+        For more detailed edge-case testing, refer to testbench code regextest.py.
+        """
 
         # REGEX Cleaning
         key = key.upper()
+        key = re.sub(r'[^a-zA-Z0-9\s]+', '', key)
         key = re.sub(r'\s+',' ', key)
         key = re.sub(r'\bAND\b', '&', key)
         key = re.sub(r'\bOR\b', '@', key)
@@ -141,9 +156,14 @@ class CanteenQuery:
         key = re.sub(r'[\s@]*&[\s@&]*', '&', key)
         key = re.sub(r'[@]*@[@]*', '@', key)
 
-        return key
+        or_groups_intermediate = re.split(r'@', key)
+        key_groups = []
 
-        
+        for group in or_groups_intermediate:
+            and_groups_intermediate = re.split(r'&', group)
+            key_groups.append(and_groups_intermediate)
+
+        return key_groups
 
 
 def main():
@@ -192,6 +212,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if __debug__: print("[DEBUG] Program is in Debug mode. Run python3 -O main.py for Normal Mode.")
     db = CanteenQuery(DATABASE_PATH)
     main()
  
