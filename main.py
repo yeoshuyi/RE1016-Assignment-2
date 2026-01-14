@@ -124,9 +124,8 @@ class CanteenQuery:
 
         parsed_key = self.normalize_query(key)
         if __debug__: 
-            print(
-                f"[DEBUG] Query resolved as:\n{parsed_key}"
-            )
+            print(f"[DEBUG] Query resolved as:\n{parsed_key}")
+        
 
         return 0
     
