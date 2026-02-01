@@ -1,3 +1,10 @@
+## 14-Jan-2025
+### Added
+- Testbench code to query db using search_by_keyword
+
+### To Do
+- Figure out how to get combinations between AND groups... when I feel less lazy
+
 ## 13-Jan-2025
 ### Added
 - Initial repo commit.
