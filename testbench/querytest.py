@@ -45,17 +45,17 @@ def query_to_dict(db, query):
     #print(results)
     return results
 
-def find_combinations(results):
-    condition_sets = {i: set(stall) for i, stall in results.items()}
-    index = condition_sets.keys()
+# def find_combinations(results):
+#     condition_sets = {i: set(stall) for i, stall in results.items()}
+#     index = condition_sets.keys()
     
-    for i in range(1, len(index) + 1):
-        for combo in itertools.combinations(index, i):
-            intersect_sets = [condition_sets[i] for temp in combo]
-            intersect_stalls = set.intersection(*intersect_sets)
-            print(intersect_stalls)
+#     for i in range(1, len(index) + 1):
+#         for combo in itertools.combinations(index, i):
+#             intersect_sets = [condition_sets[i] for temp in combo]
+#             intersect_stalls = set.intersection(*intersect_sets)
+#             print(intersect_stalls)
 
-find_combinations(query_to_dict(db,query))    
+# find_combinations(query_to_dict(db,query))    
 
 
 def display_dict(results):
