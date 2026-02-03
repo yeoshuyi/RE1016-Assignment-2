@@ -5,6 +5,7 @@ To prevent any accidental edits to the given program,
 assignment.py is called instead of editted directly.
 
 Please refer to readme.md for setup and documentation.
+Follow additional setup steps if running on Windows.
 """
 
 
@@ -36,23 +37,12 @@ DATABASE_PATH = "./canteens.xlsx"
 
 
 class CanteenQuery:
-    """This class handles the db query logic"""
+    """This class handles the db Query Logic"""
 
     def __init__(self, path):
         self.keywords = assignment.load_stall_keywords(path)
         self.prices = assignment.load_stall_prices(path)
         self.canteen_locations = assignment.load_canteen_location(path)
-
-    def search_by_keywords(self, key):
-        """Return results by keyword"""
-
-        if not isinstance(key, str): return None
-        parsed_key = self.__normalize_query(key)
-        # if __debug__: 
-        #     print(f"[DEBUG] Query resolved as:\n{parsed_key}")
-        results = self.__find_keywords(parsed_key)
-        
-        return results
     
     def __normalize_query(self, key):
         """
@@ -108,6 +98,18 @@ class CanteenQuery:
         
         return results
 
+    def search_by_keywords(self, key):
+        """Return results by keyword"""
+
+        if not isinstance(key, str): return None
+        parsed_key = self.__normalize_query(key)
+        results = self.__find_keywords(parsed_key)
+        
+        if __debug__:
+            return [results, parsed_key]
+        else:
+            return results
+
     def search_by_price(self, min, max):
         """Return results by price"""
         
@@ -146,22 +148,27 @@ class CanteenQuery:
 
 
 class CurseMenu:
-    """This class handles the CLI Graphical Interface"""
+    """This class handles the CLI Terminal Interface"""
 
     def __init__(self, db):
         self.db = db
 
     def __draw_menu(self, select_row, option):
+        """Draws main option menu"""
+        
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLUE)
         self.stdscr.bkgd(' ', curses.color_pair(2))
-        self.stdscr.clear()
+        self.stdscr.erase()
         h, w = self.stdscr.getmaxyx()
         title = "--- F&B RECOMMENDATION MENU ---"
         self.stdscr.attron(curses.A_BOLD)
         self.stdscr.addstr(1, w//2 - len(title)//2, title)
         self.stdscr.attroff(curses.A_BOLD)
         self.stdscr.border(0)
+
+        if __debug__:
+            self.stdscr.addstr(h-2,2, "[DEBUG] Running in debug mode. Additional prints shown. Run python3 -O main.py to disable.")
 
         for idx, row in enumerate(option):
             x = w//2 - len(row)//2
@@ -175,6 +182,11 @@ class CurseMenu:
         self.stdscr.refresh()
 
     def __get_input_str(self, prompt, y, x):
+        """
+        Input for search_by_keywords.
+        Input validation done backend through regex.
+        """
+
         while True:
             self.stdscr.addstr(y, x, prompt)
             curses.echo()
@@ -189,9 +201,14 @@ class CurseMenu:
             break
     
     def __get_input_float(self, prompt, y, x, min=0):
+            """
+            Input for search_by_price.
+            float > min
+            """
+
             h, w = self.stdscr.getmaxyx()
             while True:
-                self.stdscr.clear()
+                self.stdscr.erase()
                 title = "--- PRICE SEARCH ---"
                 self.stdscr.attron(curses.A_BOLD)
                 self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -219,9 +236,14 @@ class CurseMenu:
             return user_value
     
     def __get_input_int(self, prompt, y, x):
+            """
+            Input for search_by_location.
+            int > 0
+            """
+
             h, w = self.stdscr.getmaxyx()
             while True:
-                self.stdscr.clear()
+                self.stdscr.erase()
                 title = "--- LOCATION SEARCH ---"
                 self.stdscr.attron(curses.A_BOLD)
                 self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -249,6 +271,8 @@ class CurseMenu:
             return user_value
 
     def main_menu(self, stdscr):
+        """Contains logic for each menu option."""
+
         self.stdscr = stdscr
         h, w = self.stdscr.getmaxyx()
         if w < 100 or h < 20:
@@ -274,7 +298,7 @@ class CurseMenu:
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 match current_row:
                     case 0:
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         title = "--- DATABASE DICTIONARIES ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -307,21 +331,31 @@ class CurseMenu:
                         self.stdscr.getch()
                                            
                     case 1:
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         title = "--- KEYWORD SEARCH ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
                         self.stdscr.attroff(curses.A_BOLD)
                         self.stdscr.border(0)
                         self.__get_input_str("Enter Search Query:", 4, 2)
-                        results = self.db.search_by_keywords(self.user_input)
 
-                        self.stdscr.clear()
+                        if __debug__:
+                            temporary_results = self.db.search_by_keywords(self.user_input)
+                            results = temporary_results[0]
+                        else:
+                            results = self.db.search_by_keywords(self.user_input)
+                        
+
+                        self.stdscr.erase()
                         title = "--- SEARCH RESULTS ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
                         self.stdscr.attroff(curses.A_BOLD)
                         self.stdscr.border(0)
+
+                        if __debug__:
+                            debug_str = f"[DEBUG] Parsed Query: {temporary_results[1]}" 
+                            self.stdscr.addstr(h-2,2, debug_str)
 
                         if not results:
                             self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
@@ -348,7 +382,7 @@ class CurseMenu:
                         max = self.__get_input_float("Enter Maximum Price: ", 4, 2, min)
                         results = self.db.search_by_price(min, max)
 
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         title = "--- SEARCH RESULTS ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -376,10 +410,10 @@ class CurseMenu:
                         self.stdscr.getch()
 
                     case 3:
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         stall_count = self.__get_input_int("Enter Number of Stalls: ", 4, 2)
 
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         title = "--- LOCATION SEARCH ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -390,7 +424,7 @@ class CurseMenu:
                         self.stdscr.refresh()
                         time.sleep(1)
 
-                        self.stdscr.clear()
+                        self.stdscr.erase()
 
                         results = self.db.search_by_location(stall_count)
                         title = "--- LOCATION SEARCH ---"
@@ -422,7 +456,7 @@ class CurseMenu:
                         self.stdscr.getch()
                     
                     case 4:
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         title = "--- THANK YOU! GOODBYE! ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
@@ -430,7 +464,7 @@ class CurseMenu:
                         self.stdscr.border(0)
                         self.stdscr.refresh()
                         time.sleep(1)
-                        self.stdscr.clear()
+                        self.stdscr.erase()
                         break
 
 

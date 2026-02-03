@@ -1,3 +1,14 @@
+## 3-Feb-2026
+### Change
+- Refactored Terminal to Curses
+- Added Windows support
+
+### Added
+- Finished all functions
+
+### To Do
+- Rigorous testing of all inputs
+
 ## 1-Feb-2026
 ### Change
 - Refactored entire code
