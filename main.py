@@ -131,7 +131,6 @@ class CanteenQuery:
         bx, by = assignment.get_user_location_interface()
 
         results = []
-        results = []
         for canteen_name, location in self.canteen_locations.items():
             x, y = location
             distance_to_A = math.sqrt((x - ax)**2 + (y - ay)**2)
@@ -143,7 +142,7 @@ class CanteenQuery:
                 "distanceB": int(distance_to_B),
                 "max": int(max_distance)
             })
-        results.sort(key=lambda x: x['max'])
+        results.sort(key=lambda v: v['max'])
         return results[:k]
 
 
@@ -161,9 +160,12 @@ class CurseMenu:
         self.stdscr.bkgd(' ', curses.color_pair(2))
         self.stdscr.erase()
         h, w = self.stdscr.getmaxyx()
+        self.__draw_art(h)
         title = "--- F&B RECOMMENDATION MENU ---"
+        mark = "Written by R15 Yeo Shu Yi (U2524018L)"
         self.stdscr.attron(curses.A_BOLD)
         self.stdscr.addstr(1, w//2 - len(title)//2, title)
+        self.stdscr.addstr(2, w//2 - len(mark)//2, mark)
         self.stdscr.attroff(curses.A_BOLD)
         self.stdscr.border(0)
 
@@ -228,7 +230,7 @@ class CurseMenu:
                         time.sleep(1)
                         continue
                     break
-                except:
+                except ValueError:
                     self.stdscr.addstr(y+2, x, "Input must be integer/float!")
                     self.stdscr.refresh()
                     time.sleep(1)
@@ -269,6 +271,21 @@ class CurseMenu:
                     time.sleep(1)
                     continue
             return user_value
+    
+    def __draw_art(self, h):
+        """Just a fun function to draw REP on the main menu"""
+        logo = [
+            "░▒▓███████▓▒░░▒▓████████▓▒░▒▓███████▓▒░  ",
+            "░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░ ",
+            "░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░ ",
+            "░▒▓███████▓▒░░▒▓██████▓▒░ ░▒▓███████▓▒░  ",
+            "░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░        ",
+            "░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░        ",
+            "░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓█▓▒░        "
+        ]
+
+        for i, line in enumerate(logo):
+            self.stdscr.addstr(h//2 + i - 3, 10, line)
 
     def main_menu(self, stdscr):
         """Contains logic for each menu option."""
@@ -278,7 +295,7 @@ class CurseMenu:
         if w < 100 or h < 20:
             raise SystemError(
                 f"[ERROR] Please expand your CLI to at least 20x100. "
-                f"This is to prevent grahical glitches."
+                f"Currently {h}x{w}."
             )
         
         curses.curs_set(0)
@@ -307,8 +324,6 @@ class CurseMenu:
 
                         col1_width = 20
                         col2_width = w - col1_width - 10
-                        start_y = 4
-                        start_x = 5
 
                         data = [
                             ("Keywords", str(self.db.keywords)),
@@ -316,17 +331,17 @@ class CurseMenu:
                             ("Locations", str(self.db.canteen_locations))
                         ]
                         for idx, (category, content) in enumerate(data):
-                            y = start_y + 2 + (idx * 2)
+                            y = 6 + (idx * 2)
                             
                             if y >= h - 1:
                                 break
                             clean_content = content[:col2_width].replace('\n', ' ')
-                            self.stdscr.addstr(y, start_x, category.ljust(col1_width), curses.A_BOLD)
-                            self.stdscr.addstr(y, start_x + col1_width, " | ")
-                            self.stdscr.addstr(y, start_x + col1_width + 3, clean_content)
-                            self.stdscr.addstr(y + 1, start_x, "-" * (col1_width + col2_width + 3), curses.A_DIM)
+                            self.stdscr.addstr(y, 5, category.ljust(col1_width), curses.A_BOLD)
+                            self.stdscr.addstr(y, 5 + col1_width, " | ")
+                            self.stdscr.addstr(y, 5 + col1_width + 3, clean_content)
+                            self.stdscr.addstr(y + 1, 5, "-" * (col1_width + col2_width + 3), curses.A_DIM)
 
-                        self.stdscr.addstr(h-2, start_x, "Press any key to return...")
+                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.refresh()
                         self.stdscr.getch()
                                            
@@ -375,6 +390,7 @@ class CurseMenu:
 
                                 row_str = f"{c_name} | {s_name} | {criteria}"
                                 self.stdscr.addstr(y, 4, row_str)
+                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
                     
                     case 2:
@@ -407,6 +423,7 @@ class CurseMenu:
 
                                 row_str = f"{c_name} | {s_name} | {criteria}"
                                 self.stdscr.addstr(y, 4, row_str)
+                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
 
                     case 3:
@@ -452,7 +469,7 @@ class CurseMenu:
 
                                 row_str = f"{c_name} | {disA} | {disB} | {max_dis}"
                                 self.stdscr.addstr(y, 4, row_str)
-
+                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
                     
                     case 4:

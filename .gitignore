@@ -3,3 +3,5 @@ __pycache__
 old
 src
 testbench
+.idea
+export*

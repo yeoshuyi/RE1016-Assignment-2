@@ -23,10 +23,11 @@ cd RE1016-Assignment-2
 2. Install PIP libraries with venv (optional):</br>
 ```bash
 #OPTIONAL VENV SETUP (May differ based on OS)
-python3 -m venv .venv
+python3 -3.13 -m venv .venv
 source ./.venv/bin/activate
 
 #INSTALL LIBRARY
+#ONLY TESTED ON PYTHON 3.13
 python3 -m pip install -r requirements.txt
 
 #ADDITIONAL STEP FOR WINDOWS USER
@@ -38,6 +39,13 @@ python3 -m pip install -r requirements_windows.txt
 ```bash
 python3 -O main.py #Run without -O flag to see debug prints
 ```
+
+### Common Issues
+1. Terminal not found... (Make sure you run using python3 -O main.py in terminal with the right env!)
+2. Curses not found... (On Windows, you need to pip install the curses-window library!)
+3. pip install pygame or windows-curses not found... (Downgrade to Python 3.13)
+3. CLI must be at least 100x20... (Expand your terminal bigger before running!)
+
 ### Changelog
 Refer to changelog.md.
 
