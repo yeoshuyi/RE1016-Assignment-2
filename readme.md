@@ -43,7 +43,7 @@ python3 -O main.py #Run without -O flag to see debug prints
 ### Common Issues
 1. Terminal not found... (Make sure you run using python3 -O main.py in terminal with the right env!)
 2. Curses not found... (On Windows, you need to pip install the curses-window library!)
-3. pip install pygame or windows-curses not found... (Downgrade to Python 3.13)
+3. pip install pygame or windows-curses not found... (Downgrade to Python 3.13!)
 3. CLI must be at least 100x20... (Expand your terminal bigger before running!)
 
 ### Changelog

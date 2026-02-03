@@ -190,10 +190,22 @@ class CurseMenu:
         """
 
         while True:
-            self.stdscr.addstr(y, x, prompt)
+            self.stdscr.addstr(y+6, x, prompt)
             curses.echo()
+            self.stdscr.addstr(y+1, x, 
+                f"1. Conditions may utilize AND / OR operators (AND priority) together."
+            )
+            self.stdscr.addstr(y+2, x, 
+                f"2. Space between 2 keywords treated as AND. All inputs are non case-sensitive."
+            )
+            self.stdscr.addstr(y+3, x, 
+                f"3. Symbols, leading whitespaces / operators will be ignored."
+            )
+            self.stdscr.addstr(y+4, x, 
+                f"E.g. MALAY SPICY OR CHINESE AND WESTERN will be treated as (MALAY & SPICY) + (CHINESE & WESTERN)"
+            )
             self.stdscr.attron(curses.color_pair(1))
-            user_input = self.stdscr.getstr(y+1, x, 80).decode('utf-8')
+            user_input = self.stdscr.getstr(y+7, x, 80).decode('utf-8')
             self.stdscr.attroff(curses.color_pair(1))
             curses.noecho()
             if not user_input: 
