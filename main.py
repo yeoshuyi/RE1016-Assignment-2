@@ -12,6 +12,7 @@ import re
 import os
 import sys
 import builtins
+import curses
 
 #I am treating assignment.py as a module through import
 #However assignment.py has a main() function without __name__ guard
@@ -44,13 +45,12 @@ class CanteenQuery:
         """Return results by keyword"""
 
         if not isinstance(key, str): return 400
-
         parsed_key = self.normalize_query(key)
-        if __debug__: 
-            print(f"[DEBUG] Query resolved as:\n{parsed_key}")
+        # if __debug__: 
+        #     print(f"[DEBUG] Query resolved as:\n{parsed_key}")
+        results = self.find_keywords(parsed_key)
         
-
-        return 0
+        return results
     
     def normalize_query(self, key):
         """
@@ -87,55 +87,200 @@ class CanteenQuery:
 
         return key_groups
     
+    def find_keywords(self, conditions):
+        results = []
+        
+        for canteen_name, stalls in self.keywords.items():
+            for stall_name, keywords_str in stalls.items():
+                stall_keywords = {k.strip().upper() for k in keywords_str.split(',')}
+                matched_group = None
+                for and_group in conditions:
+                    if all(req_key in stall_keywords for req_key in and_group):
+                        matched_group = and_group
+                        break
+        
+            if matched_group:
+                results.append({
+                    "canteen": canteen_name,
+                    "stall": stall_name,
+                    "keywords": stall_keywords,
+                    "matched": matched_group
+                })
+
+        return results
+                        
     def search_by_location(self):
         assignment.get_user_location_interface()
 
 
+class CurseMenu:
+    """CLI Graphical Interface"""
+
+    def __init__(self, db):
+        self.db = db
+
+    def __draw_menu(self, select_row, option):
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLUE)
+        self.stdscr.bkgd(' ', curses.color_pair(2))
+        self.stdscr.clear()
+        h, w = self.stdscr.getmaxyx()
+        title = "--- F&B RECOMMENDATION MENU ---"
+        self.stdscr.attron(curses.A_BOLD)
+        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+        self.stdscr.attroff(curses.A_BOLD)
+        self.stdscr.border(0)
+
+        for idx, row in enumerate(option):
+            x = w//2 - len(row)//2
+            y = h//2 - len(option)//2 + idx
+            if idx == select_row:
+                self.stdscr.attron(curses.color_pair(1))
+                self.stdscr.addstr(y, x, row)
+                self.stdscr.attroff(curses.color_pair(1))
+            else:
+                self.stdscr.addstr(y, x, row)
+        self.stdscr.refresh()
+
+    def __get_input(self, prompt, x, y):
+        self.stdscr.addstr(x, y, prompt)
+        curses.echo()
+        user_input = self.stdscr.getstr(x+1, y, 80).decode('utf-8')
+        curses.noecho()
+        self.user_input = user_input
+
+    def main_menu(self, stdscr):
+        self.stdscr = stdscr
+        h, w = self.stdscr.getmaxyx()
+        if w < 150 or h < 20:
+            raise SystemError(
+                f"[ERROR] Please expand your CLI to at least 20x150. "
+                f"This is to prevent grahical glitches."
+            )
+        
+        curses.curs_set(0)
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
+        menu = ['Display Data', 'Keyword Search', 'Price Search', 'Location Search', 'Exit']
+        current_row = 0
+
+        while True:
+            self.__draw_menu(current_row, menu)
+        
+            key = self.stdscr.getch()
+
+            if key == curses.KEY_UP and current_row > 0:
+                current_row -= 1
+            elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
+                current_row += 1
+            elif key == curses.KEY_ENTER or key in [10, 13]:
+                match current_row:
+                    case 0:
+                        self.stdscr.clear()
+                        title = "--- DATABASE DICTIONARIES ---"
+                        self.stdscr.attron(curses.A_BOLD)
+                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                        self.stdscr.attroff(curses.A_BOLD)
+                        self.stdscr.border(0)
+
+                        col1_width = 20
+                        col2_width = w - col1_width - 10
+                        start_y = 4
+                        start_x = 5
+
+                        data = [
+                            ("Keywords", str(self.db.keywords)),
+                            ("Prices", str(self.db.prices)),
+                            ("Locations", str(self.db.canteen_locations))
+                        ]
+                        for idx, (category, content) in enumerate(data):
+                            y = start_y + 2 + (idx * 2)
+                            
+                            if y >= h - 1:
+                                break
+                            clean_content = content[:col2_width].replace('\n', ' ')
+                            self.stdscr.addstr(y, start_x, category.ljust(col1_width), curses.A_BOLD)
+                            self.stdscr.addstr(y, start_x + col1_width, " | ")
+                            self.stdscr.addstr(y, start_x + col1_width + 3, clean_content)
+                            self.stdscr.addstr(y + 1, start_x, "-" * (col1_width + col2_width + 3), curses.A_DIM)
+
+                        self.stdscr.addstr(h-2, start_x, "Press any key to return...")
+                        self.stdscr.refresh()
+                        self.stdscr.getch()
+                        
+                    
+                    case 1:
+                        self.stdscr.clear()
+                        title = "--- KEYWORD SEARCH ---"
+                        self.stdscr.attron(curses.A_BOLD)
+                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                        self.stdscr.attroff(curses.A_BOLD)
+                        self.stdscr.border(0)
+                        
+                        col_canteen = 25
+                        col_stall = 25
+                        self.__get_input("Enter Search Query:", 4, 2)
+                        results = self.db.search_by_keywords(self.user_input)
+
+                        self.stdscr.clear()
+                        title = "--- SEARCH RESULTS ---"
+                        self.stdscr.attron(curses.A_BOLD)
+                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                        self.stdscr.attroff(curses.A_BOLD)
+                        self.stdscr.border(0)
+
+                        if not results:
+                            self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
+                        else:
+
+                            header_str = f"{'CANTEEN'.ljust(col_canteen)} {'STALL'.ljust(col_stall)} {'  MATCHED'}"
+                            self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
+                            
+                            for idx, match in enumerate(results):
+                                y = 4 + idx
+                                if y >= h - 3:
+                                    self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
+                                    break
+                                
+                                c_name = match['canteen'][:col_canteen-1].ljust(col_canteen)
+                                s_name = match['stall'][:col_stall-1].ljust(col_stall)
+                                criteria = str(match['matched'])
+
+                                row_str = f"{c_name} | {s_name} | {criteria}"
+                                self.stdscr.addstr(y, 4, row_str)
+                        self.stdscr.getch()
+                    
+                    case 2:
+                        self.stdscr.clear()
+                        title = "--- PRICE SEARCH ---"
+                        self.stdscr.attron(curses.A_BOLD)
+                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                        self.stdscr.attroff(curses.A_BOLD)
+                        self.stdscr.border(0)
+
+                        self.stdscr.getch()
+
+                    case 3:
+                        self.stdscr.clear()
+
+                        self.db.search_by_location()
+                        title = "--- LOCATION SEARCH ---"
+                        self.stdscr.attron(curses.A_BOLD)
+                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                        self.stdscr.attroff(curses.A_BOLD)
+                        self.stdscr.border(0)
+
+                        self.stdscr.getch()
+                    
+                    case 4:
+                        break
+
 def main():
     """Main function for user interface"""
 
-    #Db Init
+    #Db and Menu Init
     db = CanteenQuery(path=DATABASE_PATH)
-
-    while True:
-        print(
-            "========================\n"
-            "F&B Recommendation Menu\n"
-            "1 -- Display Data\n"
-            "2 -- Keyword-based Search\n"
-            "3 -- Price-based Search\n"
-            "4 -- Location-based Search\n"
-            "5 -- Exit Program\n"
-            "========================"
-        )
-
-        while True:
-            try:
-                user_option = int(input("Enter option [1-5]: "))
-                if not 0 < user_option < 6:
-                    raise ValueError("Out of range.")
-                break
-            except ValueError:
-                print("Please try again.")
-    
-        match user_option:
-            case 1:
-                print(
-                    f"1 -- Display Data\n"
-                    f"Keyword Dictionary: {db.keywords}\n"
-                    f"Price Dictionary: {db.prices}\n"
-                    f"Location Dictionary: {db.canteen_locations}\n"
-                )
-            case 2:
-                user_option = input("Enter query: ")
-                db.search_by_keywords(user_option)
-            case 3:
-                print("Hi!")
-            case 4:
-                db.search_by_location()
-            case 5:
-                print("Thank you, goodbye!")
-                return(1)
+    menu = CurseMenu(db)
+    curses.wrapper(menu.main_menu)
             
 
 
