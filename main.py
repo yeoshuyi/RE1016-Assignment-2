@@ -21,7 +21,10 @@ import pandas as pd
 from PIL import Image
 
 
-DATABASE_PATH = "./src/canteens.xlsx"
+#Using os to find path for cross compatability between Windows / UNIX
+if __name__ == "__main__":
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATABASE_PATH = os.path.join(BASE_DIR, "src", "canteens.xlsx")
 
 
 def import_assignmentpy():

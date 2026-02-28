@@ -1,4 +1,4 @@
-## CAA: 03-Feb-2026
+## CAA: 28-Feb-2026
 
 ### Acknowledgements
 Written by Yeo Shu Yi, for RE1016 Individual Assignment.</br>
@@ -7,29 +7,24 @@ Written by Yeo Shu Yi, for RE1016 Individual Assignment.</br>
 
 ### File Management
 **No modifications done to assignment.py! main.py calls assignment.py as module**
-- main.py is the main program.
-- assignment.py is the provided module.
-- changelog.md contains commit history.
-- requirements.txt contains PIP library requirements.
-- requirements_windows.txt contains additional libraries for windows users.
-
 ```bash
 #Ensure files are in ./src!
 ├── changelog.md
 ├── documentation.md
-├── main.py
+├── main.py                     #main program
 ├── readme.md
-├── requirements.txt
-├── requirements_windows.txt
-├── src
+├── requirements.txt            #Install on BOTH Windows and Unix
+├── requirements_windows.txt    #Install on Windows only
+├── old                         #Old files, ignore please
+├── src                         #Clone all assignment files here, main.py will call them
 │   ├── assignment.py
 │   ├── canteens.xlsx
-│   ├── __init__.py
+│   ├── __init__.py             #Blank file to allow calling /src/ as module
 │   ├── NTUcampus.jpg
 │   └── pin.png
 └── testbench
-    ├── querytest.py
-    └── regextest.py
+    ├── querytest.py            #Test code for keyword query
+    └── regextest.py            #Test code for regex filter
 ```
 
 ### Setup
