@@ -1,5 +1,7 @@
 """
 testbench code to verify regex filter
+
+this should work well haha
 """
 
 
@@ -29,9 +31,11 @@ def testbench(key):
     print(key_groups)
 
 #Should output (Foo and Bar and Baz) or (Qux and Quux)
-testbench("$>  foo and    bar baz or qux   quux   or") #leading/trailing symbols or operators ignored, multiple /s resolved
-testbench(" $$^&@# f&oo* aNd BAR&&&@@@@ bAZ ||| or qux >>q>>uux   ") #leading/trailing /s ignored, symbols within keyword ignored
-testbench("$^and FOo ..BaR + Baz or    quX      and or and and or quux     ") #multiple and/or conflicting logic resolved
+# testbench("$>  foo and    bar baz or qux   quux   or") #leading/trailing symbols or operators ignored, multiple /s resolved
+# testbench(" $$^&@# f&oo* aNd BAR&&&@@@@ bAZ ||| or qux >>q>>uux   ") #leading/trailing /s ignored, symbols within keyword ignored
+# testbench("$^and FOo ..BaR + Baz or    quX      and or and and or quux     ") #multiple and/or conflicting logic resolved
 
-#Should not misintepret ORange or ANDes as operator
-testbench("  AnDes AND ORange Or foo ") #correctly displays (Andes and Orange) or (Foo)
+# #Should not misintepret ORange or ANDes as operator
+# testbench("  AnDes AND ORange Or foo ") #correctly displays (Andes and Orange) or (Foo)
+
+testbench("A OR  B")

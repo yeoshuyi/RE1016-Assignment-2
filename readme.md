@@ -13,7 +13,28 @@ Written by Yeo Shu Yi, for RE1016 Individual Assignment.</br>
 - requirements.txt contains PIP library requirements.
 - requirements_windows.txt contains additional libraries for windows users.
 
+```bash
+#Ensure files are in ./src!
+├── changelog.md
+├── documentation.md
+├── main.py
+├── readme.md
+├── requirements.txt
+├── requirements_windows.txt
+├── src
+│   ├── assignment.py
+│   ├── canteens.xlsx
+│   ├── __init__.py
+│   ├── NTUcampus.jpg
+│   └── pin.png
+└── testbench
+    ├── querytest.py
+    └── regextest.py
+```
+
 ### Setup
+For best user experienece, I recommend running the code from terminal in full screen. </br>
+
 1. Clone the repository:</br>
 ```bash
 cd <REPO PATH>
@@ -27,10 +48,9 @@ python3 -3.13 -m venv .venv
 source ./.venv/bin/activate
 
 #INSTALL LIBRARY
-#ONLY TESTED ON PYTHON 3.13
 python3 -m pip install -r requirements.txt
 
-#ADDITIONAL STEP FOR WINDOWS USER
+#ADDITIONAL STEP FOR WINDOWS USER (MUST USE PYTHON 3.13 / 3.12)
 python3 -m pip install -r requirements_windows.txt
 ```
 > requirements_windows.txt contains a curses wrapper for Windows, as it is not included in non-unix systems by default.
@@ -45,6 +65,8 @@ python3 -O main.py #Run without -O flag to see debug prints
 2. Curses not found... (On Windows, you need to pip install the curses-window library!)
 3. pip install pygame or windows-curses not found... (Downgrade to Python 3.13!)
 3. CLI must be at least 100x20... (Expand your terminal bigger before running!)
+4. stdscr not found... (Some IDEs, when running through the run button instead of terminal, does not pass stdscr properly. Please run through terminal.)
+5. canteens/NTUcampus/pin not found... (Either they are not cloned to /src properly, or something went horribly wrong with my import function import_assignmentpy()... please email me)
 
 ### Changelog
 Refer to changelog.md.

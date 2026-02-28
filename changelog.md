@@ -1,3 +1,14 @@
+## 28-Feb-2026
+### Changed
+- Updated main.py Documentation
+- Added documentation.md
+- Shifted all assignment files into ./src
+- Dealt with many annoying issues with hardcoded paths screwing with /src relocation
+
+### To Do
+- Test import_assignmentpy() on Windows environment
+- Finish documentation.md
+
 ## 3-Feb-2026
 ### Change
 - Refactored Terminal to Curses

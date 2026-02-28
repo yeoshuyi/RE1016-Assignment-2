@@ -16,30 +16,87 @@ import builtins
 import curses
 import time
 import math
-
-#I am treating assignment.py as a module through import
-#However assignment.py has a main() function without __name__ guard
-#Thus I am spoofing a exit (5) input and suppressing assignment.py stdout
-saved_stdin = builtins.input
-builtins.input = lambda _: "5"
-with open(os.devnull, 'w') as f:
-    save_stdout = sys.stdout
-    sys.stdout = f
-    try:
-        import assignment #This is assignment.py
-    finally:
-        sys.stdout = save_stdout
-        if __debug__: print("[DEBUG] assignment.py main() spoofed.")
-builtins.input = saved_stdin
+import pygame
+import pandas as pd
+from PIL import Image
 
 
-DATABASE_PATH = "./canteens.xlsx"
+DATABASE_PATH = "./src/canteens.xlsx"
+
+
+def import_assignmentpy():
+    """
+    The entire chunk below this is used to deal with issues importing assignment.py.
+    Monkey patching and std redirects is used because assignment.py was not designed to be modular.
+
+    Problem 1.  main() is being called without __name__ guard in assignment.py
+                This results in assignment.py's CLI interface being called
+
+    Solution 1. stdout is redirected before assignment.py is imported
+                A "5" is inserted to stdin to exit assignment.py's main()
+
+    Problem 2.  canteen_stall_keywords = load_stall_keywords("canteens.xlsx")
+                The line above is hardcoded to run in assignment.py, using Pandas
+                Since I have relocated the files to ./src/, this will fail
+
+    Solution 2. Overload pd.read_excel() to append ./src/ to path whenever it calls
+                canteens.xlsx
+
+    Problem 3.  Same issue as Problem 2 but with NTUcampus.jpg and pin.png
+
+    Solution 3. Same solution as Solution 2 except:
+                NTUcampus.jpg requires spoofing PIL's Image.open()
+                pin.png requires spoofing pygame.image.load()
+    """
+
+    #Spoof Pandas' read_excel by redirecting function address
+    original_read_excel = pd.read_excel
+    def spoofed_read_excel(io, *args, **kwargs):
+        if isinstance(io, str) and io == "canteens.xlsx":
+            io = os.path.join(os.getcwd(), "src", "canteens.xlsx")
+        return original_read_excel(io, *args, **kwargs)
+    pd.read_excel = spoofed_read_excel
+
+    #Spoof PIL's Image.open by redirecting function address
+    original_open = Image.open
+    def spoofed_image_open(io, mode="r", formats=None):
+        targets = ['NTUcampus.jpg', 'pin.png']
+        if isinstance(io, str) and io in targets:
+            io = os.path.join("src", io)
+        return original_open(io, mode, formats)
+    Image.open = spoofed_image_open
+
+    #Spoof pygame's image.load by redirecting function address
+    original_pygame_load = pygame.image.load
+    def spoofed_pygame_load(file, *args, **kwargs):
+        targets = ['NTUcampus.jpg', 'pin.png']
+        if isinstance(file, str) and os.path.basename(file) in targets:
+            file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", os.path.basename(file))
+        return original_pygame_load(file, *args, **kwargs)
+    pygame.image.load = spoofed_pygame_load
+    
+    #Skips assignment.py's main() by redirecting stdout
+    saved_stdin = builtins.input
+    builtins.input = lambda _: "5" #Exit assignment.py's CLI interface
+    with open(os.devnull, 'w') as f:
+        save_stdout = sys.stdout
+        sys.stdout = f
+        try:
+            from src import assignment #This is assignment.py
+        finally:
+            sys.stdout = save_stdout
+            if __debug__: print("[DEBUG] assignment.py main() spoofed.")
+    builtins.input = saved_stdin
+    return assignment
 
 
 class CanteenQuery:
     """This class handles the db Query Logic"""
 
     def __init__(self, path):
+        """
+        Loads the data from assignment.py
+        """
         self.keywords = assignment.load_stall_keywords(path)
         self.prices = assignment.load_stall_prices(path)
         self.canteen_locations = assignment.load_canteen_location(path)
@@ -58,7 +115,8 @@ class CanteenQuery:
         For more detailed edge-case testing, refer to testbench code regextest.py.
         """
 
-        # REGEX Cleaning
+        #REGEX Cleaning (Documentation for each step in ./testbench/regextest.py)
+        #Looks like a lot of step but this should be most optimised to cover all edge cases
         key = key.upper()
         key = re.sub(r'[^a-zA-Z0-9\s]+', '', key)
         key = re.sub(r'\s+',' ', key)
@@ -73,6 +131,8 @@ class CanteenQuery:
         or_groups_intermediate = re.split(r'@', key)
         key_groups = []
 
+        #Splits into data structure where AND groups are in a single list
+        #For e.g. AB + C will be [[A,B],[C]] 
         for group in or_groups_intermediate:
             and_groups_intermediate = re.split(r'&', group)
             key_groups.append(and_groups_intermediate)
@@ -80,6 +140,10 @@ class CanteenQuery:
         return key_groups
     
     def __find_keywords(self, conditions):
+        """
+        Returns all stalls that matches and_group conditions from query
+        Returns as list of dictionaries containing canteen, stall name, keywords and matched keywords
+        """
         results = []
         
         for canteen_name, stalls in self.keywords.items():
@@ -111,7 +175,7 @@ class CanteenQuery:
             return results
 
     def search_by_price(self, min, max):
-        """Return results by price"""
+        """Return results by price within min, max (inclusive of both)"""
         
         results = []
         for canteen_name, stalls in self.prices.items():
@@ -125,8 +189,13 @@ class CanteenQuery:
         return results
 
     def search_by_location(self, k):
-        """Return k results by location"""
+        """
+        Return k results by location
+        Locations are sorted based on max(distance_to_A, distance_to_B)
+        To ensure minimum time for both parties to reach the location
+        """
 
+        #Calls the location selector from assignment.py
         ax, ay = assignment.get_user_location_interface()
         bx, by = assignment.get_user_location_interface()
 
@@ -147,9 +216,10 @@ class CanteenQuery:
 
 
 class CurseMenu:
-    """This class handles the CLI Terminal Interface"""
+    """This class handles the CLI Terminal Interface using Curses"""
 
     def __init__(self, db):
+        """References the Db as initialised by CanteenQuery"""
         self.db = db
 
     def __draw_menu(self, select_row, option):
@@ -161,6 +231,7 @@ class CurseMenu:
         self.stdscr.erase()
         h, w = self.stdscr.getmaxyx()
         self.__draw_art(h)
+
         title = "--- F&B RECOMMENDATION MENU ---"
         mark = "Written by R15 Yeo Shu Yi (U2524018L)"
         self.stdscr.attron(curses.A_BOLD)
@@ -285,7 +356,8 @@ class CurseMenu:
             return user_value
     
     def __draw_art(self, h):
-        """Just a fun function to draw REP on the main menu"""
+        """Just a fun function to draw REP on the main menu."""
+
         logo = [
             "░▒▓███████▓▒░░▒▓████████▓▒░▒▓███████▓▒░  ",
             "░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░ ",
@@ -315,18 +387,20 @@ class CurseMenu:
         menu = ['Display Data', 'Keyword Search', 'Price Search', 'Location Search', 'Exit']
         current_row = 0
 
+        #Main Menu
         while True:
             self.__draw_menu(current_row, menu)
         
             key = self.stdscr.getch()
 
+            #Arrow Key Detection
             if key == curses.KEY_UP and current_row > 0:
                 current_row -= 1
             elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
                 current_row += 1
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 match current_row:
-                    case 0:
+                    case 0: #List Data
                         self.stdscr.erase()
                         title = "--- DATABASE DICTIONARIES ---"
                         self.stdscr.attron(curses.A_BOLD)
@@ -357,7 +431,7 @@ class CurseMenu:
                         self.stdscr.refresh()
                         self.stdscr.getch()
                                            
-                    case 1:
+                    case 1: #Search by Keyword
                         self.stdscr.erase()
                         title = "--- KEYWORD SEARCH ---"
                         self.stdscr.attron(curses.A_BOLD)
@@ -405,7 +479,7 @@ class CurseMenu:
                         self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
                     
-                    case 2:
+                    case 2: #Search by Price
                         min = self.__get_input_float("Enter Minimum Price: ", 4, 2, 0.00)
                         max = self.__get_input_float("Enter Maximum Price: ", 4, 2, min)
                         results = self.db.search_by_price(min, max)
@@ -438,7 +512,7 @@ class CurseMenu:
                         self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
 
-                    case 3:
+                    case 3: #Search by Location
                         self.stdscr.erase()
                         stall_count = self.__get_input_int("Enter Number of Stalls: ", 4, 2)
 
@@ -484,7 +558,7 @@ class CurseMenu:
                         self.stdscr.addstr(h-3, 5, "Press any key to return...")
                         self.stdscr.getch()
                     
-                    case 4:
+                    case 4: #Exit
                         self.stdscr.erase()
                         title = "--- THANK YOU! GOODBYE! ---"
                         self.stdscr.attron(curses.A_BOLD)
@@ -508,4 +582,5 @@ def main():
 
 if __name__ == "__main__":
     if __debug__: print("[DEBUG] Program is in Debug mode. Run python3 -O main.py for Normal Mode.")
+    assignment = import_assignmentpy()
     main()
