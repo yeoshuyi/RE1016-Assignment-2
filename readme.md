@@ -4,6 +4,8 @@
 Written by Yeo Shu Yi, for RE1016 Individual Assignment.</br>
 
 * **Dr. Ong Yew Soon** - Author of original assignment.py.
+* Refer to documentation.md for function documentation
+* Refer to changelog.md to view changelog
 
 ### File Management
 **No modifications done to assignment.py! main.py calls assignment.py as module**
