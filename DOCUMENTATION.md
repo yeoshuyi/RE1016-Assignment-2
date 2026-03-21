@@ -75,6 +75,18 @@ Pygame's original load function is shadowed by the spoofed version, which redire
 
 ## REGEX Cleaning for Key-based Search
 ### Cleaning
+Based on the rules:
+    1.  Any leading/trailing AND, OR, /s is ignored.
+    2.  Any non-alphanumeric symbols is ignored.
+    3.  In all cases "Foo AND OR AND AND OR... Bar", logic is resolved to a single AND
+        as long as a single "AND" is present. 
+    4.  If no "AND" present, in the case of "Foo OR OR... Bar", logic is resolved to a single OR.
+    5.  In all cases "Foo AND Bar OR Buz AND Qux", AND takes priority as (Foo & Bar) + (Buz & Qux).
+    6.  Cases like the restaurant "ANDES" will not be resolved as AND, as only /bAND/b is accepted.
+
+Logic has been minimized and tested over many edge cases within /testbench/regextest.py
+No known issues to date
+
 ```python
 key = key.upper()
 key = re.sub(r'[^a-zA-Z0-9\s]+', '', key) #rmv all non alphanumeric
@@ -90,6 +102,7 @@ key = re.sub(r'[@]*@[@]*', '@', key) #replace all series of @@@@@ to just @
 key_groups_intermediate = re.split(r'@', key) #split into sum of products
 key_groups = []
 ```
+>*While the logic seems over-complicated, this has been severely optimized to cover all edge cases. Further simplification usually leads to some edge cases failing.*
 
 ## MakeFile
 Handles Unix / Windows compatability for requirements installation.

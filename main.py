@@ -17,6 +17,7 @@ import curses
 import time
 import math
 import pygame
+import textwrap
 import pandas as pd
 from PIL import Image
 
@@ -404,6 +405,8 @@ class CurseMenu:
             elif key == curses.KEY_ENTER or key in [10, 13]:
                 match current_row:
                     case 0: #List Data
+                        #Case 0's code has been rewritten by Gemini to improve GUI interface
+                        #Refer to submission for documentation
                         self.stdscr.erase()
                         title = "--- DATABASE DICTIONARIES ---"
                         self.stdscr.attron(curses.A_BOLD)
@@ -411,26 +414,52 @@ class CurseMenu:
                         self.stdscr.attroff(curses.A_BOLD)
                         self.stdscr.border(0)
 
-                        col1_width = 20
-                        col2_width = w - col1_width - 10
+                        col1_width = 15
+                        col2_width = w - col1_width - 8 # Leave some padding on the right
+
+                        def format_dict(d):
+                            """Formats the dictionary into a readable string without curly braces."""
+                            if not isinstance(d, dict):
+                                return str(d)
+                            parts = []
+                            for k, v in d.items():
+                                if isinstance(v, dict):
+                                    # Format nested dictionaries: "Canteen -> Stall: Value"
+                                    sub_parts = [f"{sk}: {sv}" for sk, sv in v.items()]
+                                    parts.append(f"{k} -> {', '.join(sub_parts)}")
+                                else:
+                                    parts.append(f"{k}: {v}")
+                            return "  |  ".join(parts)
 
                         data = [
-                            ("Keywords", str(self.db.keywords)),
-                            ("Prices", str(self.db.prices)),
-                            ("Locations", str(self.db.canteen_locations))
+                            ("Keywords", format_dict(self.db.keywords)),
+                            ("Prices", format_dict(self.db.prices)),
+                            ("Locations", format_dict(self.db.canteen_locations))
                         ]
+                        
+                        start_y = 4
                         for idx, (category, content) in enumerate(data):
-                            y = 6 + (idx * 2)
+                            y = start_y + (idx * 4) # 3 rows for data + 1 row for the separator
                             
-                            if y >= h - 1:
-                                break
-                            clean_content = content[:col2_width].replace('\n', ' ')
-                            self.stdscr.addstr(y, 5, category.ljust(col1_width), curses.A_BOLD)
-                            self.stdscr.addstr(y, 5 + col1_width, " | ")
-                            self.stdscr.addstr(y, 5 + col1_width + 3, clean_content)
-                            self.stdscr.addstr(y + 1, 5, "-" * (col1_width + col2_width + 3), curses.A_DIM)
+                            if y + 3 >= h - 1:
+                                break # Prevent drawing out of bounds
 
-                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
+                            # Wrap the text to fit the column width nicely
+                            wrapped_lines = textwrap.wrap(content, width=col2_width)
+                            
+                            # Add category title on the first row
+                            self.stdscr.addstr(y, 5, category.ljust(col1_width), curses.A_BOLD)
+                            
+                            # Print exactly 3 lines (filling with blanks if text is shorter)
+                            for i in range(3):
+                                self.stdscr.addstr(y + i, 5 + col1_width, " | ")
+                                if i < len(wrapped_lines):
+                                    self.stdscr.addstr(y + i, 5 + col1_width + 3, wrapped_lines[i])
+
+                            # Draw the dotted separator underneath the 3 rows
+                            self.stdscr.addstr(y + 3, 5, "-" * (col1_width + col2_width + 3), curses.A_DIM)
+
+                        self.stdscr.addstr(h-2, 5, "Press any key to return...")
                         self.stdscr.refresh()
                         self.stdscr.getch()
                                            
