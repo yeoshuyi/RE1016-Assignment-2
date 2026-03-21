@@ -166,7 +166,7 @@ class CanteenQuery:
         
         return results
 
-    def search_by_keywords(self, key):
+    def search_by_keyword(self, key):
         """Return results by keyword"""
 
         if not isinstance(key, str): return None
@@ -192,7 +192,7 @@ class CanteenQuery:
                     })
         return results
 
-    def search_by_location(self, k):
+    def search_nearest_canteens(self, k):
         """
         Return k results by location
         Locations are sorted based on max(distance_to_A, distance_to_B)
@@ -260,7 +260,7 @@ class CurseMenu:
 
     def __get_input_str(self, prompt, y, x):
         """
-        Input for search_by_keywords.
+        Input for search_by_keyword.
         Input validation done backend through regex.
         """
 
@@ -326,7 +326,7 @@ class CurseMenu:
     
     def __get_input_int(self, prompt, y, x):
             """
-            Input for search_by_location.
+            Input for search_nearest_canteens.
             int > 0
             """
 
@@ -473,10 +473,10 @@ class CurseMenu:
                         self.__get_input_str("Enter Search Query:", 4, 2)
 
                         if __debug__:
-                            temporary_results = self.db.search_by_keywords(self.user_input)
+                            temporary_results = self.db.search_by_keyword(self.user_input)
                             results = temporary_results[0]
                         else:
-                            results = self.db.search_by_keywords(self.user_input)
+                            results = self.db.search_by_keyword(self.user_input)
                         
 
                         self.stdscr.erase()
@@ -561,7 +561,7 @@ class CurseMenu:
 
                         self.stdscr.erase()
 
-                        results = self.db.search_by_location(stall_count)
+                        results = self.db.search_nearest_canteens(stall_count)
                         title = "--- LOCATION SEARCH ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
