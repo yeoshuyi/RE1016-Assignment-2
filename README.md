@@ -57,6 +57,9 @@ python3 -m pip install -r requirements_windows.txt
 python3 -O main.py #Run without -O flag to see debug prints
 ```
 
+### Alternate Setup
+> *Alternatively, run make help, setup, clean, run and debug for automated processes with cross-compatability between Windows and Unix-like. Windows users will require a ported version of GNU make.*
+
 ### Common Issues
 1. Terminal not found... (Make sure you run using python3 -O main.py in terminal with the right env!)
 2. Curses not found... (On Windows, you need to pip install the curses-window library!)

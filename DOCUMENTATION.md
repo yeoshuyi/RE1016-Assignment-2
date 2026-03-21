@@ -90,3 +90,23 @@ key = re.sub(r'[@]*@[@]*', '@', key) #replace all series of @@@@@ to just @
 key_groups_intermediate = re.split(r'@', key) #split into sum of products
 key_groups = []
 ```
+
+## MakeFile
+Handles Unix / Windows compatability for requirements installation.
+```Makefile
+ifeq ($(OS), Windows_NT)
+    VENV_PATH = .venv\Scripts
+    PYTHON = $(VENV_PATH)\python.exe
+    PIP = $(VENV_PATH)\pip.exe
+    RM = del /Q
+    FIX_PATH = $(subst /,\,$1)
+    EXTRA_INSTALL = $(PIP) install -r requirements_windows.txt
+else
+    VENV_PATH = .venv/bin
+    PYTHON = ./$(VENV_PATH)/python
+    PIP = ./$(VENV_PATH)/pip
+    RM = rm -rf
+    FIX_PATH = $1
+    EXTRA_INSTALL = 
+endif
+```

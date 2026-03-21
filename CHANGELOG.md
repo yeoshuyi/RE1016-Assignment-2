@@ -1,3 +1,7 @@
+## 21-Mar-2026
+### Changed
+- Added Makefile Automation
+
 ## 04-Mar-2026
 ### Changed
 - Updated documentation.md
