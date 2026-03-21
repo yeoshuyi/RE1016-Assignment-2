@@ -28,6 +28,8 @@ However, this has posed a few problems, namely:
 * The default CLI in assignment.py runs within a main() loop, that is not protected by \_\_name\_\_ guards. Thus, when import assignment is executed, the default CLI shows up instead of the Curses CLI implemented in main.py.
 * All file paths within assignment.py are hardcoded. This poses an issue as assignment.py is now within the src directory. Since main.py is in a different directory, the default path used by each of the file management functions in pygame, NumPy and PIL does not work.
 
+>*My workarounds for these issues involve modifying global namespace functions, which I highly do not recommend. However in this case, I could not think of a better solution. To make things better, I made sure that the redefinitions should only target specific inputs.*
+
 ### Implementation for Issue #1
 To solve the first issue, we implement the following:
 ```python
@@ -61,6 +63,8 @@ while loop:
 Since input has been shadowed to return the literal character 5 within main.py, assignment.py exits its main loop immediately and returns to main.py, effectively bypassing the default CLI.
 
 ### Implementation for Issue #2
+
+> *My workarounds for these issues involve modifying global namespace functions, which I highly do not recommend. However in this case, I could not think of a better solution. To make things better, I made sure that the redefinitions should only target specific inputs.*
 To solve the second issue, we implement the following:
 ```python
 original_pygame_load = pygame.image.load
@@ -75,6 +79,8 @@ Pygame's original load function is shadowed by the spoofed version, which redire
 
 ## REGEX Cleaning for Key-based Search
 ### Cleaning
+
+> *To be honest, with the time taken to write this regex filter, I could have probably just written a proper lexer/tokenizer*
 Based on the rules:
     1.  Any leading/trailing AND, OR, /s is ignored.
     2.  Any non-alphanumeric symbols is ignored.

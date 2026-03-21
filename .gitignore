@@ -3,3 +3,5 @@ __pycache__
 old
 .idea
 export*
+*.pdf
+*.docx
