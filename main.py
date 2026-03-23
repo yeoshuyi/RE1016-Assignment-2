@@ -170,21 +170,42 @@ class CanteenQuery:
         """Return results by keyword"""
 
         if not isinstance(key, str): return None
-        parsed_key = self.__normalize_query(key)
-        results = self.__find_keywords(parsed_key)
+        if key == '*': #Select All
+            results = []
+            for canteen_name, stalls in self.keywords.items():
+                for stall_name, keyword_str in stalls.items():
+                    results.append({
+                            "canteen": canteen_name,
+                            "stall": stall_name,
+                            "keywords": keyword_str,
+                            "matched": "*"
+                        })
+            parsed_key = "*"
+        else:
+            parsed_key = self.__normalize_query(key)
+            results = self.__find_keywords(parsed_key)
         
         if __debug__:
             return [results, parsed_key]
         else:
             return results
 
-    def search_by_price(self, min, max):
+    def search_by_price(self, key, min, max):
         """Return results by price within min, max (inclusive of both)"""
         
+        #Calls search by keyword to create filter list
+        if __debug__:
+            filter_list = self.search_by_keyword(key)[0]
+        else:
+            filter_list = self.search_by_keyword(key)
+        if len(filter_list) > 0:
+            filter = [item["stall"] for item in filter_list]
+        else:
+            filter = []
         results = []
         for canteen_name, stalls in self.prices.items():
             for stall_name, price in stalls.items():
-                if min <= price <= max:
+                if min <= price <= max and stall_name in filter:
                     results.append({
                         "canteen": canteen_name,
                         "stall": stall_name,
@@ -265,7 +286,7 @@ class CurseMenu:
         """
 
         while True:
-            self.stdscr.addstr(y+6, x, prompt)
+            self.stdscr.addstr(y+9, x, prompt)
             curses.echo()
             self.stdscr.addstr(y+1, x, 
                 f"1. Conditions may utilize AND / OR operators (AND priority) together."
@@ -277,15 +298,21 @@ class CurseMenu:
                 f"3. Symbols, leading whitespaces / operators will be ignored."
             )
             self.stdscr.addstr(y+4, x, 
+                f"4. Enter simply \'*\' to select ALL results in database."
+            )
+            self.stdscr.addstr(y+5, x, 
                 f"E.g. MALAY SPICY OR CHINESE AND WESTERN will be treated as (MALAY & SPICY) + (CHINESE & WESTERN)"
             )
+            self.stdscr.addstr(y+7, x, 
+                f"Leave Blank to Escape back to Main Menu..."
+            )
             self.stdscr.attron(curses.color_pair(1))
-            user_input = self.stdscr.getstr(y+7, x, 80).decode('utf-8')
+            user_input = self.stdscr.getstr(y+10, x, 80).decode('utf-8')
             self.stdscr.attroff(curses.color_pair(1))
             curses.noecho()
-            if not user_input: 
-                self.stdscr.addstr(y+2, x, "Input cannot be empty!")
-                continue
+            # if not user_input: 
+            #     self.stdscr.addstr(y+2, x, "Input cannot be empty!")
+            #     continue
             self.user_input = user_input
             break
     
@@ -339,11 +366,16 @@ class CurseMenu:
                 self.stdscr.attroff(curses.A_BOLD)
                 self.stdscr.border(0)
                 self.stdscr.addstr(y, x, prompt)
+                self.stdscr.addstr(y+6, x, 
+                    f"Leave Blank to Escape back to Main Menu..."
+                )
                 curses.echo()
                 self.stdscr.attron(curses.color_pair(1))
                 user_input = self.stdscr.getstr(y+1, x, 80).decode('utf-8')
                 self.stdscr.attroff(curses.color_pair(1))
                 curses.noecho()
+                if user_input == "":
+                    return 9876 #Custom exit code to return to menu
                 try:
                     user_value = int(user_input)
                     if user_value < 1:
@@ -388,12 +420,13 @@ class CurseMenu:
         
         curses.curs_set(0)
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)
-        menu = ['Display Data', 'Keyword Search', 'Price Search', 'Location Search', 'Exit']
+        menu = ['Display Data', 'Keyword Search', 'Keyword and Price Search', 'Location Search', 'Exit']
         current_row = 0
 
         #Main Menu
         while True:
             self.__draw_menu(current_row, menu)
+            self.user_input = None 
         
             key = self.stdscr.getch()
 
@@ -472,123 +505,135 @@ class CurseMenu:
                         self.stdscr.border(0)
                         self.__get_input_str("Enter Search Query:", 4, 2)
 
-                        if __debug__:
-                            temporary_results = self.db.search_by_keyword(self.user_input)
-                            results = temporary_results[0]
-                        else:
-                            results = self.db.search_by_keyword(self.user_input)
-                        
-
-                        self.stdscr.erase()
-                        title = "--- SEARCH RESULTS ---"
-                        self.stdscr.attron(curses.A_BOLD)
-                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
-                        self.stdscr.attroff(curses.A_BOLD)
-                        self.stdscr.border(0)
-
-                        if __debug__:
-                            debug_str = f"[DEBUG] Parsed Query: {temporary_results[1]}" 
-                            self.stdscr.addstr(h-2,2, debug_str)
-
-                        if not results:
-                            self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
-                        else:
-                            header_str = f"{'CANTEEN'.ljust(25)} {'STALL'.ljust(27)} {'MATCHED'}"
-                            self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
+                        if self.user_input:
+                            if __debug__:
+                                temporary_results = self.db.search_by_keyword(self.user_input)
+                                results = temporary_results[0]
+                            else:
+                                results = self.db.search_by_keyword(self.user_input)
                             
-                            for idx, match in enumerate(results):
-                                y = 4 + idx
-                                if y >= h - 3:
-                                    self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
-                                    break
-                                
-                                c_name = match['canteen'][:24].ljust(25)
-                                s_name = match['stall'][:24].ljust(25)
-                                criteria = str(match['matched'])
+                            self.stdscr.erase()
+                            title = "--- SEARCH RESULTS ---"
+                            self.stdscr.attron(curses.A_BOLD)
+                            self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                            self.stdscr.attroff(curses.A_BOLD)
+                            self.stdscr.border(0)
 
-                                row_str = f"{c_name} | {s_name} | {criteria}"
-                                self.stdscr.addstr(y, 4, row_str)
-                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
-                        self.stdscr.getch()
+                            if __debug__:
+                                debug_str = f"[DEBUG] Parsed Query: {temporary_results[1]}" 
+                                self.stdscr.addstr(h-2,2, debug_str)
+
+                            if not results:
+                                self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
+                            else:
+                                header_str = f"{'CANTEEN'.ljust(25)} {'STALL'.ljust(27)} {'MATCHED'}"
+                                self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
+                                
+                                for idx, match in enumerate(results):
+                                    y = 4 + idx
+                                    if y >= h - 3:
+                                        self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
+                                        break
+                                    
+                                    c_name = match['canteen'][:24].ljust(25)
+                                    s_name = match['stall'][:24].ljust(25)
+                                    criteria = str(match['matched'])
+
+                                    row_str = f"{c_name} | {s_name} | {criteria}"
+                                    self.stdscr.addstr(y, 4, row_str)
+                            self.stdscr.addstr(h-3, 5, "Press any key to return...")
+                            self.stdscr.getch()
                     
                     case 2: #Search by Price
-                        min = self.__get_input_float("Enter Minimum Price: ", 4, 2, 0.00)
-                        max = self.__get_input_float("Enter Maximum Price: ", 4, 2, min)
-                        results = self.db.search_by_price(min, max)
-
                         self.stdscr.erase()
-                        title = "--- SEARCH RESULTS ---"
+                        title = "--- KEYWORD AND PRICE SEARCH ---"
                         self.stdscr.attron(curses.A_BOLD)
                         self.stdscr.addstr(1, w//2 - len(title)//2, title)
                         self.stdscr.attroff(curses.A_BOLD)
                         self.stdscr.border(0)
+                        self.__get_input_str("Enter Search Query:", 4, 2)
 
-                        if not results:
-                            self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
-                        else:
-                            header_str = f"{'CANTEEN'.ljust(25)} {'STALL'.ljust(27)} {'PRICE'}"
-                            self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
+                        if self.user_input:
                             
-                            for idx, match in enumerate(results):
-                                y = 4 + idx
-                                if y >= h - 3:
-                                    self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
-                                    break
-                                
-                                c_name = match['canteen'][:24].ljust(25)
-                                s_name = match['stall'][:24].ljust(25)
-                                criteria = str(match['price'])
+                            min = self.__get_input_float("Enter Minimum Price: ", 4, 2, 0.00)
+                            max = self.__get_input_float("Enter Maximum Price: ", 4, 2, min)
+                            results = self.db.search_by_price(self.user_input, min, max)
 
-                                row_str = f"{c_name} | {s_name} | {criteria}"
-                                self.stdscr.addstr(y, 4, row_str)
-                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
-                        self.stdscr.getch()
+                            self.stdscr.erase()
+                            title = "--- SEARCH RESULTS ---"
+                            self.stdscr.attron(curses.A_BOLD)
+                            self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                            self.stdscr.attroff(curses.A_BOLD)
+                            self.stdscr.border(0)
+
+                            if not results:
+                                self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
+                            else:
+                                header_str = f"{'CANTEEN'.ljust(25)} {'STALL'.ljust(27)} {'PRICE'}"
+                                self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
+                                
+                                for idx, match in enumerate(results):
+                                    y = 4 + idx
+                                    if y >= h - 3:
+                                        self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
+                                        break
+                                    
+                                    c_name = match['canteen'][:24].ljust(25)
+                                    s_name = match['stall'][:24].ljust(25)
+                                    criteria = str(match['price'])
+
+                                    row_str = f"{c_name} | {s_name} | {criteria}"
+                                    self.stdscr.addstr(y, 4, row_str)
+                            self.stdscr.addstr(h-3, 5, "Press any key to return...")
+                            self.stdscr.getch()
 
                     case 3: #Search by Location
                         self.stdscr.erase()
                         stall_count = self.__get_input_int("Enter Number of Stalls: ", 4, 2)
 
-                        self.stdscr.erase()
-                        title = "--- LOCATION SEARCH ---"
-                        self.stdscr.attron(curses.A_BOLD)
-                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
-                        self.stdscr.attroff(curses.A_BOLD)
-                        self.stdscr.border(0)
+                        if stall_count != 9876:
 
-                        self.stdscr.addstr(4, 2, "Please select 2 locations on the map.")
-                        self.stdscr.refresh()
-                        time.sleep(1)
+                            self.stdscr.erase()
+                            title = "--- LOCATION SEARCH ---"
+                            self.stdscr.attron(curses.A_BOLD)
+                            self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                            self.stdscr.attroff(curses.A_BOLD)
+                            self.stdscr.border(0)
 
-                        self.stdscr.erase()
+                            self.stdscr.addstr(4, 2, "Please select 2 locations on the map.")
+                            self.stdscr.refresh()
+                            time.sleep(1)
 
-                        results = self.db.search_nearest_canteens(stall_count)
-                        title = "--- LOCATION SEARCH ---"
-                        self.stdscr.attron(curses.A_BOLD)
-                        self.stdscr.addstr(1, w//2 - len(title)//2, title)
-                        self.stdscr.attroff(curses.A_BOLD)
-                        self.stdscr.border(0)
+                            self.stdscr.erase()
 
-                        if not results:
-                            self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
-                        else:
-                            header_str = f"{'CANTEEN'.ljust(25)} {'DISTANCE TO USER A / m'.ljust(25)} {'DISTANCE TO USER B / m'.ljust(25)} {'MAX DISTANCE / m'.ljust(25)}"
-                            self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
-                            
-                            for idx, match in enumerate(results):
-                                y = 4 + idx
-                                if y >= h - 3:
-                                    self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
-                                    break
+                            results = self.db.search_nearest_canteens(stall_count)
+                            title = "--- LOCATION SEARCH ---"
+                            self.stdscr.attron(curses.A_BOLD)
+                            self.stdscr.addstr(1, w//2 - len(title)//2, title)
+                            self.stdscr.attroff(curses.A_BOLD)
+                            self.stdscr.border(0)
+
+                            if not results:
+                                self.stdscr.addstr(h//2, w//2 - 10, "No matches found.")
+                            else:
+                                header_str = f"{'CANTEEN'.ljust(25)} {'DISTANCE TO USER A / m'.ljust(25)} {'DISTANCE TO USER B / m'.ljust(25)} {'MAX DISTANCE / m'.ljust(25)}"
+                                self.stdscr.addstr(3, 4, header_str.ljust(w-8)) 
                                 
-                                c_name = match['canteen'][:24].ljust(25)
-                                disA = str(match['distanceA']).ljust(23)
-                                disB = str(match['distanceB']).ljust(23)
-                                max_dis = str(match['max'])
+                                for idx, match in enumerate(results):
+                                    y = 4 + idx
+                                    if y >= h - 3:
+                                        self.stdscr.addstr(y, 4, "... more results hidden ...", curses.A_DIM)
+                                        break
+                                    
+                                    c_name = match['canteen'][:24].ljust(25)
+                                    disA = str(match['distanceA']).ljust(23)
+                                    disB = str(match['distanceB']).ljust(23)
+                                    max_dis = str(match['max'])
 
-                                row_str = f"{c_name} | {disA} | {disB} | {max_dis}"
-                                self.stdscr.addstr(y, 4, row_str)
-                        self.stdscr.addstr(h-3, 5, "Press any key to return...")
-                        self.stdscr.getch()
+                                    row_str = f"{c_name} | {disA} | {disB} | {max_dis}"
+                                    self.stdscr.addstr(y, 4, row_str)
+                            self.stdscr.addstr(h-3, 5, "Press any key to return...")
+                            self.stdscr.getch()
                     
                     case 4: #Exit
                         self.stdscr.erase()
