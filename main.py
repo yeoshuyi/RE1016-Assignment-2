@@ -28,10 +28,14 @@ if __name__ == "__main__":
     DATABASE_PATH = os.path.join(BASE_DIR, "src", "canteens.xlsx")
 
 
-def import_assignmentpy():
+#Import helper function
+def __import_assignmentpy():
     """
     The entire chunk below this is used to deal with issues importing assignment.py.
     Monkey patching and std redirects is used because assignment.py was not designed to be modular.
+
+    These are not super good solutions, because they involve redefining library functions.
+    However, the edits have been scoped to specific cases to minimise possible issues upstream.
 
     Problem 1.  main() is being called without __name__ guard in assignment.py
                 This results in assignment.py's CLI interface being called
@@ -94,6 +98,7 @@ def import_assignmentpy():
     return assignment
 
 
+#Program Classes
 class CanteenQuery:
     """This class handles the db Query Logic"""
 
@@ -168,10 +173,21 @@ class CanteenQuery:
         return results
 
     def search_by_keyword(self, keywords):
-        """Return results by keyword"""
+        """
+        Return results by keyword
+        
+        Follows rules:
+        1.  Any leading/trailing AND, OR, /s is ignored.
+        2.  Any non-alphanumeric symbols is ignored.
+        3.  In all cases "Foo AND OR AND AND OR... Bar", logic is resolved to a single AND
+            as long as a single "AND" is present. 
+        4.  If no "AND" present, in the case of "Foo OR OR... Bar", logic is resolved to a single OR.
+        5.  In all cases "Foo AND Bar OR Buz AND Qux", AND takes priority as (Foo & Bar) + (Buz & Qux).
+        6.  Cases like the restaurant "ANDES" will not be resolved as AND, as only /bAND/b is accepted.
+        """
 
         #Patch because I accidentally used key as my input before. 
-        #Should not be issue in terms of efficiency, compiler will resolve the same.
+        #Should not be issue in terms of efficiency, compiler will resolve the same. (Will be optimized away)
         key = keywords 
 
         if not isinstance(key, str): return None
@@ -196,15 +212,22 @@ class CanteenQuery:
             return results
 
     def search_by_price(self, keywords, min_price, max_price):
-        """Return results by price within min, max (inclusive of both)"""
+        """
+        Calls the search_by_keyword first.
+
+        Return results by price within min, max (inclusive of both) of the search_by_keyword results.
+        """
         
         #Patch because I accidentally used key as my input before. 
-        #Should not be issue in terms of efficiency, compiler will resolve the same.
+        #Should not be issue in terms of efficiency, compiler will resolve the same. (Will be optimized away)
         key = keywords
         min = min_price
         max = max_price
 
         #Calls search by keyword to create filter list
+        #Sorry this is quite poorly optimized, as I did not know I need to run keyword search for search_by_price
+        #So this was added in quite late and sort of forced in :(
+        #But it works well enough
         if __debug__:
             filter_list = self.search_by_keyword(key)[0]
         else:
@@ -213,6 +236,7 @@ class CanteenQuery:
             filter = [item["stall"] for item in filter_list]
         else:
             filter = []
+
         results = []
         for canteen_name, stalls in self.prices.items():
             for stall_name, price in stalls.items():
@@ -230,6 +254,7 @@ class CanteenQuery:
         Locations are sorted based on max(distance_to_A, distance_to_B)
         To ensure minimum time for both parties to reach the location
 
+        user_location expects 2 locations in the form [[x1,y1],[x2,y2]]
         Calls the pygame interface if no user_location is provided
         """
 
@@ -246,9 +271,13 @@ class CanteenQuery:
         results = []
         for canteen_name, location in self.canteen_locations.items():
             x, y = location
+
+            #Euclidean Distance
             distance_to_A = math.sqrt((x - ax)**2 + (y - ay)**2)
             distance_to_B = math.sqrt((x - bx)**2 + (y - by)**2)
+            #Used max instead of average, because I want it to return least time taken for both users to reach.
             max_distance = max(distance_to_A, distance_to_B)
+            
             results.append({
                 "canteen": canteen_name,
                 "distanceA": int(distance_to_A),
@@ -329,6 +358,7 @@ class CurseMenu:
             user_input = self.stdscr.getstr(y+10, x, 80).decode('utf-8')
             self.stdscr.attroff(curses.color_pair(1))
             curses.noecho()
+            #Removed to add return to main menu via empty input
             # if not user_input: 
             #     self.stdscr.addstr(y+2, x, "Input cannot be empty!")
             #     continue
@@ -356,6 +386,7 @@ class CurseMenu:
                 self.stdscr.attroff(curses.color_pair(1))
                 curses.noecho()
                 try:
+                    #Input validation for float value and within range
                     user_value = float(user_input)
                     if user_value < min:
                         self.stdscr.addstr(y+2, x, f"Input must be more than ${min:.2f}!")
@@ -394,8 +425,9 @@ class CurseMenu:
                 self.stdscr.attroff(curses.color_pair(1))
                 curses.noecho()
                 if user_input == "":
-                    return 9876 #Custom exit code to return to menu
+                    return 9876 #Custom exit code to return to menu (Arbritarily Chosen)
                 try:
+                    #Input validation for int value and within range
                     user_value = int(user_input)
                     if user_value < 1:
                         self.stdscr.addstr(y+2, x, f"Input must be more than 0!")
@@ -667,6 +699,7 @@ class CurseMenu:
                         break
 
 
+#Main Function
 def main():
     """Main function for user interface"""
 
@@ -676,7 +709,10 @@ def main():
     curses.wrapper(menu.main_menu)            
 
 
+#Name Guard
 if __name__ == "__main__":
     if __debug__: print("[DEBUG] Program is in Debug mode. Run python3 -O main.py for Normal Mode.")
-    assignment = import_assignmentpy()
+    
+    #Custom import only ran within name guard, to prevent issues when importing from upstream.
+    assignment = __import_assignmentpy()
     main()
