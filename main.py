@@ -121,6 +121,7 @@ class CanteenQuery:
 
         #REGEX Cleaning (Documentation for each step in ./testbench/regextest.py)
         #Looks like a lot of step but this should be most optimised to cover all edge cases
+        #Chose regex over standard tokenizer for SIMD efficiency
         key = key.upper()
         key = re.sub(r'[^a-zA-Z0-9\s]+', '', key)
         key = re.sub(r'\s+',' ', key)
@@ -166,8 +167,12 @@ class CanteenQuery:
         
         return results
 
-    def search_by_keyword(self, key):
+    def search_by_keyword(self, keywords):
         """Return results by keyword"""
+
+        #Patch because I accidentally used key as my input before. 
+        #Should not be issue in terms of efficiency, compiler will resolve the same.
+        key = keywords 
 
         if not isinstance(key, str): return None
         if key == '*': #Select All
@@ -190,9 +195,15 @@ class CanteenQuery:
         else:
             return results
 
-    def search_by_price(self, key, min, max):
+    def search_by_price(self, keywords, min_price, max_price):
         """Return results by price within min, max (inclusive of both)"""
         
+        #Patch because I accidentally used key as my input before. 
+        #Should not be issue in terms of efficiency, compiler will resolve the same.
+        key = keywords
+        min = min_price
+        max = max_price
+
         #Calls search by keyword to create filter list
         if __debug__:
             filter_list = self.search_by_keyword(key)[0]
@@ -213,16 +224,24 @@ class CanteenQuery:
                     })
         return results
 
-    def search_nearest_canteens(self, k):
+    def search_nearest_canteens(self, user_locations, k):
         """
         Return k results by location
         Locations are sorted based on max(distance_to_A, distance_to_B)
         To ensure minimum time for both parties to reach the location
+
+        Calls the pygame interface if no user_location is provided
         """
 
-        #Calls the location selector from assignment.py
-        ax, ay = assignment.get_user_location_interface()
-        bx, by = assignment.get_user_location_interface()
+        #Concious decision to shift get_user_location_interface() to within search_nearest_canteens()
+        #This is because I want to keep display functions strictly within CurseMenu and logic within CanteenQuery
+        if user_locations == None:
+            #Calls the location selector from assignment.py
+            ax, ay = assignment.get_user_location_interface()
+            bx, by = assignment.get_user_location_interface()
+        else:
+            ax, ay = user_locations[0]
+            bx, by = user_locations[1]
 
         results = []
         for canteen_name, location in self.canteen_locations.items():
@@ -606,7 +625,7 @@ class CurseMenu:
 
                             self.stdscr.erase()
 
-                            results = self.db.search_nearest_canteens(stall_count)
+                            results = self.db.search_nearest_canteens(None, stall_count)
                             title = "--- LOCATION SEARCH ---"
                             self.stdscr.attron(curses.A_BOLD)
                             self.stdscr.addstr(1, w//2 - len(title)//2, title)
